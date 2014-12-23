@@ -212,9 +212,5 @@ pip-log.txt
 *.mo
 
 #Mr Developer
-.mr.developer.cfg
-Syndra/App.config
-Syndra/Syndra.csproj
-Marksman/Properties/Resources.Designer.cs
-*.csproj
-*.sln
+#*.csproj
+#*.sln
