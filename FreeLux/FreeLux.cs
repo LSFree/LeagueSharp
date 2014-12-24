@@ -11,7 +11,6 @@ using LeagueSharp;
 using LeagueSharp.Common;
 using SharpDX;
 using Color = System.Drawing.Color;
-using NewTargetSelector = LeagueSharp.Common.SimpleTs;
 #endregion
 
 namespace FreeLux
@@ -92,6 +91,7 @@ namespace FreeLux
             drawingMenu.AddItem(new MenuItem("drawW", "Draw W").SetValue(false));
             drawingMenu.AddItem(new MenuItem("drawE", "Draw E").SetValue(true));
             drawingMenu.AddItem(new MenuItem("drawR", "Draw R").SetValue(true));
+            drawingMenu.AddItem(new MenuItem("drawMinimapR", "Draw R on Minimap").SetValue(true));
             drawingMenu.AddItem(new MenuItem("drawFullComboKillIndicator", "Draw Combo Kill Indicator").SetValue(true));
             Menu.AddSubMenu(drawingMenu);
 
@@ -146,9 +146,9 @@ namespace FreeLux
             bool drawW = Menu.Item("drawW").GetValue<bool>();
             bool drawE = Menu.Item("drawE").GetValue<bool>();
             bool drawR = Menu.Item("drawR").GetValue<bool>();
+            bool drawMinimapR = Menu.Item("drawMinimapR").GetValue<bool>();
 
             Color color = Color.Green;
-
             Vector3 playerPosition = ObjectManager.Player.Position;
 
             if (drawQ) Utility.DrawCircle(playerPosition, Q.Range, color);
@@ -164,13 +164,15 @@ namespace FreeLux
                     s =>
                         Render.OnScreen(Drawing.WorldToScreen(hero.Position)) &&
                         Menu.Item("drawFullComboKillIndicator").GetValue<bool>();
-                if (MathHelper.GetComboDamage(hero) >= hero.Health)
-                    text.text = "Full Combo Kill!";
-                else
-                    text.text = "";
+                text.text = MathHelper.GetDamageString(hero);
                 text.OutLined = true;
                 text.Add();
             }
+
+            // I think this will draw the range of Final Spark on the minimap?
+            if (Player.Level >= 6 && drawMinimapR)
+                Utility.DrawCircle(playerPosition, R.Range, color, 5, 30, true);
+
         }
     }
 }

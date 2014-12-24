@@ -54,8 +54,7 @@ namespace FreeLux
             else if (HasIllumination(target))
                 return;
 
-            if (useDFG)
-                if (Items.CanUseItem(InternalDfgId) && Items.HasItem(InternalDfgId) && target.IsValidTarget(InternalDfgRange))
+            if (useDFG && Items.CanUseItem(InternalDfgId) && Items.HasItem(InternalDfgId) && target.IsValidTarget(InternalDfgRange))
                     Items.UseItem(InternalDfgId, target);
 
             if (FreeLux.Q.IsReady() && useQ && target.IsValidTarget(FreeLux.Q.Range) && !HasIllumination(target))
@@ -120,9 +119,9 @@ namespace FreeLux
         public static void AutoShieldAlly()
         {
             int autoShieldPercentage = FreeLux.Menu.Item("allyAutoShieldPercentage").GetValue<int>();
+            int autoShieldMinMana = FreeLux.Menu.Item("allyAutoShieldMinMana").GetValue<Slider>().Value;
             if (FreeLux.W.IsReady() &&
-                FreeLux.Player.Mana / FreeLux.Player.MaxMana * 100 >=
-                FreeLux.Menu.Item("allyAutoShieldMinMana").GetValue<Slider>().Value)
+                FreeLux.Player.Mana / FreeLux.Player.MaxMana * 100 >= autoShieldMinMana)
             {
                 var leastHealthAllyInRange =
                     ObjectManager.Get<Obj_AI_Hero>()
@@ -138,9 +137,9 @@ namespace FreeLux
         public static void AutoShieldSelf()
         {
             int autoShieldPercentage = FreeLux.Menu.Item("selfAutoShieldPercentage").GetValue<int>();
+            int autoShieldMinMana = FreeLux.Menu.Item("allyAutoShieldMinMana").GetValue<Slider>().Value;
             if (FreeLux.W.IsReady() &&
-                FreeLux.Player.Mana / FreeLux.Player.MaxMana * 100 >=
-                FreeLux.Menu.Item("selfAutoShieldMinMana").GetValue<Slider>().Value)
+                FreeLux.Player.Mana / FreeLux.Player.MaxMana * 100 >= autoShieldMinMana)
             {
                 // Check to see if there is an ally in range that we can shield too, since we're already trying to shield ourself.
                 var leastHealthAllyInRange =
@@ -153,7 +152,7 @@ namespace FreeLux
                 else
                 {
                     // If not, just go ahead and shield ourself
-                    FreeLux.W.Cast(Game.CursorPos,FreeLux.PacketCast);
+                    FreeLux.W.Cast(Game.CursorPos, FreeLux.PacketCast);
                 }
             }
         }

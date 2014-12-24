@@ -16,7 +16,7 @@ namespace FreeLux
             get { return FreeLux.Player; }
         }
 
-        public static float GetComboDamage(Obj_AI_Base enemy)
+        private static float GetComboDamage(Obj_AI_Base enemy)
         {
             var damage = 0d;
 
@@ -48,6 +48,53 @@ namespace FreeLux
             }
 
             return (float) damage;
+        }
+
+        public static string GetDamageString(Obj_AI_Base enemy)
+        {
+            double qDamage, eDamage, rDamage, iDamage;
+            string str = "";
+
+            qDamage = Player.GetSpellDamage(enemy, SpellSlot.Q);
+            eDamage = Player.GetSpellDamage(enemy, SpellSlot.E);
+            rDamage = Player.GetSpellDamage(enemy, SpellSlot.Q);
+            iDamage = Player.GetSummonerSpellDamage(enemy, Damage.SummonerSpell.Ignite);
+
+            if (enemy.Health < qDamage)
+                str = "Q Kill!";
+            else if (enemy.Health < eDamage)
+                str = "E Kill!";
+            else if (enemy.Health < rDamage)
+                str = "R Kill!";
+            else if (enemy.Health < iDamage)
+                str = "Ignite Kill!";
+            else if (enemy.Health < qDamage + iDamage)
+                str = "Q+Ignite Kill!";
+            else if (enemy.Health < eDamage + iDamage)
+                str = "E+Ignite Kill!";
+            else if (enemy.Health < rDamage + iDamage)
+                str = "R+Ignite Kill!";
+            else if (enemy.Health < qDamage + eDamage)
+                str = "Q+E Kill!";
+            else if (enemy.Health < qDamage + rDamage)
+                str = "Q+R Kill!";
+            else if (enemy.Health < eDamage + rDamage)
+                str = "E+R Kill!";
+            else if (enemy.Health < qDamage + eDamage + iDamage)
+                str = "Q+E+Ignite Kill!";
+            else if (enemy.Health < qDamage + rDamage + iDamage)
+                str = "Q+R+Ignite Kill!";
+            else if (enemy.Health < eDamage + rDamage + iDamage)
+                str = "E+R+Ignite Kill!";
+            else if (enemy.Health < qDamage + eDamage + rDamage)
+                str = "Q+E+R Kill!";
+            else if (enemy.Health < qDamage + eDamage + rDamage + iDamage)
+                str = "Q+E+R+Ignite Kill!";
+            else if (enemy.Health < GetComboDamage(enemy))
+                str = "Full Combo Kill!";
+            else
+                str = "Cannot Kill!";
+            return str;
         }
     }
 }
