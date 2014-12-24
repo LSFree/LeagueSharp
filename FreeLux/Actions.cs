@@ -16,10 +16,10 @@ namespace FreeLux
     {
         private const string InternalPassiveName = "luxilluminatingfraulein";
         private const string InternalEName = "LuxLightstrike_tar_green";
+        private const string InternalEName2 = "LuxLightstrike_tar_red";
         private const string InternalBindingName = "LuxLightBindingMis";
         private const int InternalDfgId = 3128;
         private const int InternalDfgRange = 750;
-        private const int InternalBasicAttackRange = 550;
         private const int InternalIgniteRange = 600;
         private static GameObject luxEObject;
 
@@ -49,7 +49,7 @@ namespace FreeLux
             if (!target.IsValidTarget())
                 return;
 
-            if (HasIllumination(target) && target.IsValidTarget(InternalBasicAttackRange))
+            if (HasIllumination(target) && Orbwalking.InAutoAttackRange(target))
                 FreeLux.Player.IssueOrder(GameObjectOrder.AttackUnit, target); 
             else if (HasIllumination(target))
                 return;
@@ -72,7 +72,7 @@ namespace FreeLux
                 {
                     FreeLux.E.CastIfHitchanceEquals(target, HitChance.High, FreeLux.PacketCast);
                 }
-                if (HasIllumination(target) && target.IsValidTarget(InternalBasicAttackRange))
+                if (HasIllumination(target) && Orbwalking.InAutoAttackRange(target))
                     FreeLux.Player.IssueOrder(GameObjectOrder.AttackUnit, target);
             }
 
@@ -176,13 +176,13 @@ namespace FreeLux
 
         public static void GameObject_OnCreate(GameObject sender, EventArgs args)
         {
-            if (sender.Name.Contains(InternalEName))
+            if (sender.Name.Contains(InternalEName) || sender.Name.Contains(InternalEName2))
                 luxEObject = sender;
         }
 
         public static void GameObject_OnDelete(GameObject sender, EventArgs args)
         {
-            if (sender.Name.Contains(InternalEName))
+            if (sender.Name.Contains(InternalEName) || sender.Name.Contains(InternalEName2))
                 luxEObject = null;
         }
 
