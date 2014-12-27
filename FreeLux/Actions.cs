@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
-using System.Threading.Tasks;
 
 using LeagueSharp;
 using LeagueSharp.Common;
@@ -18,115 +16,275 @@ namespace FreeLux
         private const string InternalEName = "LuxLightstrike_tar_green";
         private const string InternalEName2 = "LuxLightstrike_tar_red";
         private const string InternalBindingName = "LuxLightBindingMis";
-        private const int InternalDfgId = 3128;
-        private const int InternalDfgRange = 750;
         private const int InternalIgniteRange = 600;
-        private static GameObject luxEObject;
+        private static GameObject _luxEObject;
 
         public static void Combo()
         {
-            bool useQ, useW, useE, useR, useDFG, useIgnite;
+            bool useQ, useE, useR, useDFG, useIgnite, onlyUseRToKill;
             useQ = FreeLux.Menu.Item("comboQ").GetValue<bool>();
-            useW = FreeLux.Menu.Item("comboW").GetValue<bool>();
             useE = FreeLux.Menu.Item("comboE").GetValue<bool>();
             useR = FreeLux.Menu.Item("comboR").GetValue<bool>();
             useDFG = FreeLux.Menu.Item("comboDFG").GetValue<bool>();
             useIgnite = FreeLux.Menu.Item("comboIgnite").GetValue<bool>();
+            onlyUseRToKill = FreeLux.Menu.Item("comboOnlyUltToKill").GetValue<bool>();
 
-            var target = SimpleTs.GetTarget(FreeLux.Q.Range, SimpleTs.DamageType.Magical);
-
-            if (target == null)
+            var autoAttackTarget =
+                TargetSelector.GetTarget(FreeLux.Player.GetRealAutoAttackRange(), TargetSelector.DamageType.Magical);
+            if (autoAttackTarget != null && autoAttackTarget.GetType() == typeof(Obj_AI_Hero) && HasIllumination(autoAttackTarget))
                 return;
 
-            if (luxEObject != null)
+            if (useQ && FreeLux.Q.IsReady())
             {
-                var targetsInE =
-                    ObjectManager.Get<Obj_AI_Hero>().Where(h => h.IsValidTarget(luxEObject.BoundingRadius)).ToList();
-                if (targetsInE.Any(t => !HasIllumination(t)))
-                    FreeLux.E.Cast(FreeLux.PacketCast);
-            }
-
-            if (!target.IsValidTarget())
-                return;
-
-            if (HasIllumination(target) && Orbwalking.InAutoAttackRange(target))
-                FreeLux.Player.IssueOrder(GameObjectOrder.AttackUnit, target); 
-            else if (HasIllumination(target))
-                return;
-
-            if (useDFG && Items.CanUseItem(InternalDfgId) && Items.HasItem(InternalDfgId) && target.IsValidTarget(InternalDfgRange))
-                    Items.UseItem(InternalDfgId, target);
-
-            if (FreeLux.Q.IsReady() && useQ && target.IsValidTarget(FreeLux.Q.Range) && !HasIllumination(target))
-                CastQ(target);
-
-            if (FreeLux.W.IsReady() && useW)
-                FreeLux.W.Cast(target, FreeLux.PacketCast);
-
-            if (FreeLux.E.IsReady() && useE && target.IsValidTarget(FreeLux.E.Range) && luxEObject == null)
-            {
-                if (HasLightBinding(target))
-                    FreeLux.E.Cast(target, FreeLux.PacketCast);
-                else
+                var t = TargetSelector.GetTarget(FreeLux.Q.Range, TargetSelector.DamageType.Magical) as Obj_AI_Hero;
+                if (t == null)
+                    return;
+                if (t.IsValidTarget())
                 {
-                    FreeLux.E.CastIfHitchanceEquals(target, HitChance.High, FreeLux.PacketCast);
+                    FreeLux.Q.CastIfHitchanceEquals(t, HitChance.High, FreeLux.PacketCast);
+                    //Game.PrintChat("Tried to cast Q.");
+                    return;
                 }
-                if (HasIllumination(target) && Orbwalking.InAutoAttackRange(target))
-                    FreeLux.Player.IssueOrder(GameObjectOrder.AttackUnit, target);
             }
 
-            if (target.IsDead)
-                return;
-            if (FreeLux.R.IsReady() || !useR || HasIllumination(target))
-                return;
-
-            // Maybe add an option to optimize AOE damage by trying to hit more than one enemy champion?
-
-            if (FreeLux.Menu.Item("comboOnlyUltToKill").GetValue<bool>())
+            if (useE && FreeLux.E.IsReady())
             {
-                if (ObjectManager.Player.GetSpellDamage(target, SpellSlot.R) >= target.Health)
-                    FreeLux.R.Cast(target, FreeLux.PacketCast);
-            }
-            else
-            {
-                FreeLux.R.Cast(target, FreeLux.PacketCast);
+                var t = TargetSelector.GetTarget(FreeLux.E.Range, TargetSelector.DamageType.Magical) as Obj_AI_Hero;
+                if (EObjectExists())
+                {
+                    if (!ObjectManager.Get<Obj_AI_Hero>()
+                            .Where(h => h.IsEnemy && !h.IsDead)
+                            .Any(e => e.Distance(_luxEObject.Position) <= FreeLux.E.Width))
+                        return;
+
+                    if (t == null)
+                        return;
+
+                    // If they're in our AA range and don't have the illumination passive (we want to auto attack them first), pop E.
+                    if (InAutoAttackRange(t) && !HasIllumination(t))
+                    {
+                        FreeLux.E.Cast(FreeLux.PacketCast);
+                        return;
+                    }
+                    // If they aren't in our AA range, pop E
+                    else if (InAutoAttackRange(t))
+                    {
+                        FreeLux.E.Cast(FreeLux.PacketCast);
+                        return;
+                    }
+                    return;
+                }
+
+                if (t == null)
+                    return;
+                // Automatically cast E on them if they're bound.
+                if (HasLightBinding(t))
+                {
+                    if (FreeLux.E.Cast(t) == Spell.CastStates.SuccessfullyCasted)
+                        return;
+                }
+                // We're holding down spacebar and our Q didn't land or it wasn't up, so try to cast it in a sensible place.
+                else if (t.IsValidTarget())
+                {
+                    FreeLux.E.CastIfHitchanceEquals(t, HitChance.High, FreeLux.PacketCast);
+                    return;
+                }
             }
 
-            if (useIgnite && IsIgniteKillable(FreeLux.Player, target))
+            if (useIgnite && FreeLux.IgniteSlot.IsReady())
             {
-                if (FreeLux.IgniteSlot != SpellSlot.Unknown &&
-                    FreeLux.Player.SummonerSpellbook.CanUseSpell(FreeLux.IgniteSlot) == SpellState.Ready &&
-                    target.IsValidTarget(InternalIgniteRange))
-                    FreeLux.Player.SummonerSpellbook.CastSpell(FreeLux.IgniteSlot, target);
+                var igniteTarget = TargetSelector.GetTarget(InternalIgniteRange, TargetSelector.DamageType.True) as Obj_AI_Hero;
+                if (igniteTarget == null)
+                    return;
+                // First, check to see if we can kill them with ignite (so we can save our ult)
+                if (IsIgniteKillable(FreeLux.Player, igniteTarget))
+                {
+                    FreeLux.Player.Spellbook.CastSpell(FreeLux.IgniteSlot, igniteTarget);
+                    return;
+                }
+                // Then, check to see if we can kill them with Ignite and then our ult, and do so if we can.
+                else if (MathHelper.GetIgniteDamage(igniteTarget) + MathHelper.GetRDamage(igniteTarget) > igniteTarget.Health && useR && FreeLux.R.IsReady())
+                {
+                    FreeLux.Player.Spellbook.CastSpell(FreeLux.IgniteSlot, igniteTarget);
+                    CastR(igniteTarget);
+                    return;
+                }
             }
+
+            if (useR && FreeLux.R.IsReady())
+            {
+                // Remember, R automatically pops the illumination passive's damage on a target and then applies it again.
+                var rTarget =
+                    TargetSelector.GetTarget(FreeLux.R.Range, TargetSelector.DamageType.Magical) as Obj_AI_Hero;
+                if (rTarget == null)
+                    return;
+                // Only cast R if it will kill them (include procing the passive in the damage that is applied in 'killing them')
+                // Also, make sure that the damage from the passive wouldn't do enough by itself to kill them
+                // And of course, only include the passive damage if they're in range to be auto attacked.
+                if (MathHelper.GetRDamage(rTarget) + ((HasIllumination(rTarget) && InAutoAttackRange(rTarget)) ? MathHelper.GetPassiveProcDamage() : 0.0d) >= rTarget.Health &&
+                   ((HasIllumination(rTarget) && InAutoAttackRange(rTarget)) ? MathHelper.GetPassiveProcDamage() : 0.0d) >= rTarget.Health &&
+                   onlyUseRToKill)
+                {
+                    CastR(rTarget);
+                    return;
+                }
+                else if (!onlyUseRToKill)
+                {
+                    CastRForAoeDamage(rTarget);
+                    return;
+                }
+            }
+
         }
 
         public static void Mixed()
         {
-            throw new NotImplementedException();
+            bool useQ, useE, useQE;
+            useQ = FreeLux.Menu.Item("mixedQ").GetValue<bool>();
+            useE = FreeLux.Menu.Item("mixedE").GetValue<bool>();
+            useQE = FreeLux.Menu.Item("mixedQE").GetValue<bool>();
+            int mixedMinMana = FreeLux.Menu.Item("mixedMinMana").GetValue<Slider>().Value;
+
+            var target = TargetSelector.GetTarget(FreeLux.E.Range, TargetSelector.DamageType.Magical) as Obj_AI_Hero;
+
+            if (target == null)
+                return;
+
+            if (EObjectExists())
+            {
+                FreeLux.E.Cast(FreeLux.PacketCast);
+                return;
+            }
+
+            if (FreeLux.Player.ManaPercentage() <= mixedMinMana)
+                return;
+            if (HasIllumination(target))
+                return;
+
+            /*if (HasIllumination(target) && Orbwalking.InAutoAttackRange(target))
+                FreeLux.Player.IssueOrder(GameObjectOrder.AttackUnit, target);*/
+
+            if (useQ && FreeLux.Q.IsReady() && target.IsValidTarget(FreeLux.Q.Range))
+            {
+                FreeLux.Q.CastIfHitchanceEquals(target, HitChance.VeryHigh, FreeLux.PacketCast);
+                return;
+            }
+
+
+            if (useQE && HasLightBinding(target) && FreeLux.E.IsReady() && target.IsValidTarget(FreeLux.E.Range))
+            {
+                FreeLux.E.CastIfHitchanceEquals(target, HitChance.High, FreeLux.PacketCast);
+                if (EObjectExists())
+                {
+                    FreeLux.E.Cast(FreeLux.PacketCast);
+                    return;
+                }
+            }
+            else if (useE && !useQE && FreeLux.E.IsReady() && target.IsValidTarget(FreeLux.E.Range))
+            {
+                FreeLux.E.CastIfHitchanceEquals(target, HitChance.High, FreeLux.PacketCast);
+                return;
+            }
+
         }
 
         public static void KillSteal()
         {
-            throw new NotImplementedException();
+            if (FreeLux.R.IsReady())
+            {
+                var ksTargets =
+                    ObjectManager.Get<Obj_AI_Hero>()
+                        .Where(a => a.IsEnemy && a.Distance(FreeLux.Player.Position) < FreeLux.R.Range)
+                        .OrderBy(a => a.HealthPercentage());
+                        //.FirstOrDefault();
+                foreach (var target in ksTargets)
+                {
+                    if (MathHelper.GetRDamage(target) >= target.Health)
+                    {
+                        CastR(target);
+                        return;
+                    }
+                }
+                /*var rTarget =
+                    TargetSelector.GetTarget(FreeLux.R.Range, TargetSelector.DamageType.Magical) as Obj_AI_Hero;
+                // Only cast R if it will kill them (include procing the passive in the damage that is applied in 'killing them')
+                // Also, make sure that the damage from the passive wouldn't do enough by itself to kill them
+                // And of course, only include the passive damage if they're in range to be auto attacked.
+                if (MathHelper.GetRDamage(rTarget) +
+                    ((HasIllumination(rTarget) && InAutoAttackRange(rTarget)) ? MathHelper.GetPassiveProcDamage() : 0.0d) >=
+                    rTarget.Health &&
+                    ((HasIllumination(rTarget) && InAutoAttackRange(rTarget)) ? MathHelper.GetPassiveProcDamage() : 0.0d) >=
+                    rTarget.Health &&)
+                {
+                    CastR(rTarget);
+                    return;
+                }*/
+            }
         }
 
         public static void LaneClear()
         {
-            throw new NotImplementedException();
+            if (!Orbwalking.CanMove(50))
+                return;
+            
+
+            bool useQ, useE;
+            useQ = FreeLux.Menu.Item("laneClearQ").GetValue<bool>();
+            useE = FreeLux.Menu.Item("laneClearE").GetValue<bool>();
+
+            var allMinionsQ = MinionManager.GetMinions(
+                FreeLux.Player.ServerPosition, FreeLux.Q.Range, MinionTypes.All, MinionTeam.NotAlly);
+            var rangedMinionsE = MinionManager.GetMinions(
+                FreeLux.Player.ServerPosition, FreeLux.E.Range + FreeLux.E.Width, MinionTypes.Ranged,
+                MinionTeam.NotAlly);
+            var allMinionsE = MinionManager.GetMinions(
+                FreeLux.Player.ServerPosition, FreeLux.E.Range + FreeLux.E.Width, MinionTypes.All,
+                MinionTeam.NotAlly);
+
+            var minionsAutoAttack = MinionManager.GetMinions(
+                FreeLux.Player.Position, FreeLux.Player.GetRealAutoAttackRange(), MinionTypes.All, MinionTeam.NotAlly);
+            foreach (var minion in minionsAutoAttack)
+            {
+                if (HasIllumination(minion))
+                    FreeLux.Player.IssueOrder(GameObjectOrder.AttackUnit, minion);
+            }
+
+            if (EObjectExists())
+            {
+                 FreeLux.E.Cast(FreeLux.PacketCast);
+            }
+
+            if (FreeLux.Player.ManaPercentage() <= FreeLux.Menu.Item("laneClearMinMana").GetValue<Slider>().Value)
+                return;
+
+            if (useE && FreeLux.E.IsReady() && !EObjectExists())
+            {
+                var pos1 = FreeLux.E.GetCircularFarmLocation(rangedMinionsE, FreeLux.E.Width);
+                var pos2 = FreeLux.E.GetCircularFarmLocation(allMinionsE, FreeLux.E.Width);
+                if (pos1.MinionsHit >= 4)
+                    FreeLux.E.Cast(pos1.Position, FreeLux.PacketCast);
+                else if (pos2.MinionsHit >= 4)
+                    FreeLux.E.Cast(pos2.Position, FreeLux.PacketCast);
+            }
+            else if (useQ && FreeLux.Q.IsReady())
+            {
+                var pos = FreeLux.Q.GetLineFarmLocation(allMinionsQ, FreeLux.Q.Width);
+                if (pos.MinionsHit == 2)
+                    FreeLux.Q.Cast(pos.Position, FreeLux.PacketCast);
+            }
         }
 
         public static void AutoShieldAlly()
         {
-            int autoShieldPercentage = FreeLux.Menu.Item("allyAutoShieldPercentage").GetValue<int>();
+            int autoShieldPercentage = FreeLux.Menu.Item("allyAutoShieldPercentage").GetValue<Slider>().Value;
             int autoShieldMinMana = FreeLux.Menu.Item("allyAutoShieldMinMana").GetValue<Slider>().Value;
             if (FreeLux.W.IsReady() &&
-                FreeLux.Player.Mana / FreeLux.Player.MaxMana * 100 >= autoShieldMinMana)
+                FreeLux.Player.ManaPercentage() >= autoShieldMinMana)
             {
                 var leastHealthAllyInRange =
                     ObjectManager.Get<Obj_AI_Hero>()
                         .Where(a => a.IsAlly && a.Distance(FreeLux.Player.Position) < FreeLux.W.Range)
-                        .OrderBy(a => a.Health / a.MaxHealth * 100)
+                        .OrderBy(a => a.HealthPercentage())
                         .FirstOrDefault();
 
                 if (leastHealthAllyInRange != null && leastHealthAllyInRange.Health < autoShieldPercentage)
@@ -136,18 +294,19 @@ namespace FreeLux
 
         public static void AutoShieldSelf()
         {
-            int autoShieldPercentage = FreeLux.Menu.Item("selfAutoShieldPercentage").GetValue<int>();
-            int autoShieldMinMana = FreeLux.Menu.Item("allyAutoShieldMinMana").GetValue<Slider>().Value;
+            int autoShieldPercentage = FreeLux.Menu.Item("selfAutoShieldPercentage").GetValue<Slider>().Value;
+            int autoShieldMinMana = FreeLux.Menu.Item("selfAutoShieldMinMana").GetValue<Slider>().Value;
             if (FreeLux.W.IsReady() &&
-                FreeLux.Player.Mana / FreeLux.Player.MaxMana * 100 >= autoShieldMinMana)
+                FreeLux.Player.ManaPercentage() >= autoShieldMinMana &&
+                FreeLux.Player.HealthPercentage() <= autoShieldPercentage)
             {
                 // Check to see if there is an ally in range that we can shield too, since we're already trying to shield ourself.
                 var leastHealthAllyInRange =
                     ObjectManager.Get<Obj_AI_Hero>()
                         .Where(a => a.IsAlly && a.Distance(FreeLux.Player.Position) < FreeLux.W.Range)
-                        .OrderBy(a => a.Health / a.MaxHealth * 100)
+                        .OrderBy(a => a.HealthPercentage())
                         .FirstOrDefault();
-                if (leastHealthAllyInRange != null && leastHealthAllyInRange.Health < autoShieldPercentage)
+                if (leastHealthAllyInRange != null)
                     FreeLux.W.Cast(leastHealthAllyInRange, FreeLux.PacketCast);
                 else
                 {
@@ -168,6 +327,16 @@ namespace FreeLux
             return target.HasBuff(InternalBindingName);
         }
 
+        public static bool EObjectExists()
+        {
+            return (_luxEObject != null);
+        }
+
+        public static bool InAutoAttackRange(Obj_AI_Base target)
+        {
+            return FreeLux.Player.Distance(target) <= FreeLux.Player.GetRealAutoAttackRange();
+        }
+
         private static bool IsIgniteKillable(Obj_AI_Hero source, Obj_AI_Base target)
         {
             return Damage.GetSummonerSpellDamage(source, target, Damage.SummonerSpell.Ignite) >= target.Health;
@@ -176,13 +345,13 @@ namespace FreeLux
         public static void GameObject_OnCreate(GameObject sender, EventArgs args)
         {
             if (sender.Name.Contains(InternalEName) || sender.Name.Contains(InternalEName2))
-                luxEObject = sender;
+                _luxEObject = sender;
         }
 
         public static void GameObject_OnDelete(GameObject sender, EventArgs args)
         {
             if (sender.Name.Contains(InternalEName) || sender.Name.Contains(InternalEName2))
-                luxEObject = null;
+                _luxEObject = null;
         }
 
         public static void AntiGapcloser_OnEnemyGapcloser(ActiveGapcloser gapcloser)
@@ -193,32 +362,57 @@ namespace FreeLux
 
         // Q Logic from ChewyMoonsLux
         // Source: https://github.com/ChewyMoon/ChewyMoonScripts/blob/master/ChewyMoonsLux/SpellCombo.cs
-        public static bool AnalyzeQ(PredictionInput input, PredictionOutput output)
+        public static Spell.CastStates CastQ(Obj_AI_Hero target, HitChance hitChance = HitChance.Medium)
         {
-            var posList = new List<Vector3> { ObjectManager.Player.ServerPosition, output.CastPosition };
-            var collision = Collision.GetCollision(posList, input);
-            var minions = collision.Count(collisionObj => collisionObj.IsMinion);
-            return minions > 1;
-        }
-
-        public static void CastQ(Obj_AI_Hero target)
-        {
-            Console.Clear();
-
             var prediction = FreeLux.Q.GetPrediction(target, true);
-            var minions = prediction.CollisionObjects.Count(thing => thing.IsMinion);
-
-            /*if (FreeLux.Debug)
-            {
-                Console.WriteLine("Minions: {0}\nToo Many: {1}", minions, minions > 1);
-            }*/
+            /*var minions = prediction.CollisionObjects.Count(thing => thing.IsMinion);
 
             if (minions > 1)
+                return Spell.CastStates.Collision;*/
+
+            if (prediction.Hitchance == hitChance)
+            {
+                FreeLux.Q.Cast(prediction.CastPosition, FreeLux.PacketCast);
+                return Spell.CastStates.SuccessfullyCasted;
+            }
+            return Spell.CastStates.NotCasted;
+        }
+
+        public static Spell.CastStates CastR(Obj_AI_Hero target, HitChance hitChance = HitChance.High)
+        {
+            var prediction = FreeLux.R.GetPrediction(target, true);
+            if (prediction.Hitchance == hitChance)
+            {
+                FreeLux.R.Cast(prediction.CastPosition, FreeLux.PacketCast);
+                return Spell.CastStates.SuccessfullyCasted;
+            }
+            return Spell.CastStates.NotCasted;
+        }
+
+        public static Spell.CastStates CastRForAoeDamage(Obj_AI_Hero target)
+        {
+            var prediction = FreeLux.R.GetPrediction(target, true);
+            if (prediction.AoeTargetsHitCount > 2)
+            {
+                FreeLux.R.Cast(prediction.CastPosition, FreeLux.PacketCast);
+                return Spell.CastStates.SuccessfullyCasted;
+            }
+            return Spell.CastStates.NotCasted;
+        }
+
+        internal static void Obj_AI_Base_OnTeleport(GameObject sender, GameObjectTeleportEventArgs args)
+        {
+            if (!FreeLux.Menu.Item("killRecalling").GetValue<bool>())
                 return;
 
-            //FreeLux.Q.Cast(prediction.CastPosition, FreeLux.PacketCast);
-            if (prediction.Hitchance == HitChance.High)
-                FreeLux.Q.Cast(prediction.CastPosition, FreeLux.PacketCast);
+            var decoded = Packet.S2C.Teleport.Decoded(sender, args);
+            var enemy = ObjectManager.GetUnitByNetworkId<Obj_AI_Hero>(decoded.UnitNetworkId);
+
+            if (enemy.IsAlly || FreeLux.Player.Distance(enemy) > FreeLux.R.Range || decoded.Type != Packet.S2C.Teleport.Type.Recall || decoded.Status != Packet.S2C.Teleport.Status.Start)
+                return;
+
+            if (MathHelper.GetRDamage(enemy) > enemy.Health)
+                FreeLux.R.Cast(enemy);
         }
     }
 }

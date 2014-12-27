@@ -1,13 +1,10 @@
-﻿using System;
-using LeagueSharp;
+﻿using LeagueSharp;
 using LeagueSharp.Common;
 
 namespace FreeLux
 {
     internal static class MathHelper
     {
-        private const int InternalDfgId = 3128;
-        private const int InternalDfgRange = 750;
         private const int InternalBasicAttackRange = 550;
         private const int InternalIgniteRange = 600;
 
@@ -29,7 +26,7 @@ namespace FreeLux
             if (FreeLux.R.IsReady())
                 damage += Player.GetSpellDamage(enemy, SpellSlot.R);
 
-            if (Items.HasItem(3128))
+            if (Items.HasItem(FreeLux.DeathfireGrasp.Id))
             {
                 damage += Player.GetItemDamage(enemy, Damage.DamageItems.Dfg);
                 damage = damage * 1.2;
@@ -40,11 +37,11 @@ namespace FreeLux
                 damage += Player.GetSummonerSpellDamage(enemy, Damage.SummonerSpell.Ignite);
             }
 
-            damage += Player.GetAutoAttackDamage(enemy, true) * 2;
+            //damage += Player.GetAutoAttackDamage(enemy, true) * 2;
 
             if (Actions.HasIllumination(enemy))
             {
-                damage += 10 + 8 * Player.Level + (Player.FlatMagicDamageMod + Player.BaseAbilityDamage)*0.2d;
+                damage += GetPassiveProcDamage();
             }
 
             return (float) damage;
@@ -55,10 +52,11 @@ namespace FreeLux
             double qDamage, eDamage, rDamage, iDamage;
             string str = "";
 
-            qDamage = Player.GetSpellDamage(enemy, SpellSlot.Q);
-            eDamage = Player.GetSpellDamage(enemy, SpellSlot.E);
-            rDamage = Player.GetSpellDamage(enemy, SpellSlot.Q);
-            iDamage = Player.GetSummonerSpellDamage(enemy, Damage.SummonerSpell.Ignite);
+            qDamage = (FreeLux.Q.IsReady()) ? Player.GetSpellDamage(enemy, SpellSlot.Q) : 0.0d;
+            eDamage = (FreeLux.E.IsReady()) ? Player.GetSpellDamage(enemy, SpellSlot.E) : 0.0d;
+            rDamage = (FreeLux.R.IsReady()) ? Player.GetSpellDamage(enemy, SpellSlot.R) : 0.0d;
+            iDamage = (FreeLux.IgniteSlot.IsReady()) ? Player.GetSummonerSpellDamage(enemy, Damage.SummonerSpell.Ignite) : 0.0d;
+
 
             if (enemy.Health < qDamage)
                 str = "Q Kill!";
@@ -95,6 +93,21 @@ namespace FreeLux
             else
                 str = "Cannot Kill!";
             return str;
+        }
+
+        public static double GetPassiveProcDamage()
+        {
+            return 10 + 8 * Player.Level + (Player.FlatMagicDamageMod + Player.BaseAbilityDamage) * 0.2d;
+        }
+
+        public static double GetIgniteDamage(Obj_AI_Hero enemy)
+        {
+            return Player.GetSummonerSpellDamage(enemy, Damage.SummonerSpell.Ignite);
+        }
+
+        public static double GetRDamage(Obj_AI_Hero enemy)
+        {
+            return Player.GetSpellDamage(enemy, SpellSlot.R);
         }
     }
 }

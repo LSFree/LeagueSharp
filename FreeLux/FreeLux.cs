@@ -1,11 +1,6 @@
 ﻿#region Includes
 using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Drawing;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 using LeagueSharp;
 using LeagueSharp.Common;
@@ -15,13 +10,14 @@ using Color = System.Drawing.Color;
 
 namespace FreeLux
 {
-    internal class FreeLux
+    internal static class FreeLux
     {
-        private static string ChampionName = "Lux";
-        public static Orbwalking.Orbwalker Orbwalker;
+        private const string ChampionName = "Lux";
+        private static Orbwalking.Orbwalker Orbwalker;
         public static Obj_AI_Hero Player = ObjectManager.Player;
         public static Spell Q, W, E, R;
         public static SpellSlot IgniteSlot;
+        public static Items.Item DeathfireGrasp;
         public static bool PacketCast;
         public static Menu Menu;
 
@@ -45,6 +41,9 @@ namespace FreeLux
             /* Summoner Spells */
             IgniteSlot = Player.GetSpellSlot("SummonerDot");
 
+            /* Items */
+            DeathfireGrasp = new Items.Item(3128, 750);
+
             /* Menu */
             #region Menu
             Menu = new Menu("Free" + ChampionName, ChampionName, true);
@@ -54,12 +53,11 @@ namespace FreeLux
             Menu.AddSubMenu(orbwalkerMenu);
 
             Menu targetSelectorMenu = new Menu("Target Selector", "Target Selector");
-            SimpleTs.AddToMenu(targetSelectorMenu); // CHANGE THIS TO TargetSelector.AddToMenu(targetSelectorMenu) FOR 4.21
+            TargetSelector.AddToMenu(targetSelectorMenu);
             Menu.AddSubMenu(targetSelectorMenu);
 
             Menu comboMenu = new Menu("Combo", "Combo");
             comboMenu.AddItem(new MenuItem("comboQ", "Use Q").SetValue(true));
-            comboMenu.AddItem(new MenuItem("comboW", "Use W").SetValue(false));
             comboMenu.AddItem(new MenuItem("comboE", "Use E").SetValue(true));
             comboMenu.AddItem(new MenuItem("comboR", "Use R").SetValue(true));
             comboMenu.AddItem(new MenuItem("comboOnlyUltToKill", "Only use R to kill").SetValue(true));
@@ -68,22 +66,25 @@ namespace FreeLux
             Menu.AddSubMenu(comboMenu);
 
             Menu laneClearMenu = new Menu("Lane Clear", "Lane Clear");
-            comboMenu.AddItem(new MenuItem("laneClearQ", "Use Q").SetValue(false));
-            comboMenu.AddItem(new MenuItem("laneClearE", "Use E").SetValue(true));
+            laneClearMenu.AddItem(new MenuItem("laneClearQ", "Use Q").SetValue(false));
+            laneClearMenu.AddItem(new MenuItem("laneClearE", "Use E").SetValue(true));
+            laneClearMenu.AddItem(new MenuItem("laneClearMinMana", "Lane Clear Min Mana %").SetValue(new Slider(70)));
             Menu.AddSubMenu(laneClearMenu);
 
             Menu mixedMenu = new Menu("Harass/Mixed", "Mixed");
-            comboMenu.AddItem(new MenuItem("mixedQ", "Use Q").SetValue(false));
-            comboMenu.AddItem(new MenuItem("mixedE", "Use E").SetValue(true));
+            mixedMenu.AddItem(new MenuItem("mixedQ", "Use Q").SetValue(true));
+            mixedMenu.AddItem(new MenuItem("mixedE", "Use E").SetValue(false));
+            mixedMenu.AddItem(new MenuItem("mixedQE", "Use E if Q lands").SetValue(true));
+            mixedMenu.AddItem(new MenuItem("mixedMinMana", "Harass Min Mana %").SetValue(new Slider(50)));
             Menu.AddSubMenu(mixedMenu);
 
             Menu autoShieldMenu = new Menu("Auto Shield", "Auto Shield");
-            autoShieldMenu.AddItem(new MenuItem("allyAutoShield", "Automatically Shield Allies").SetValue(new KeyBind('h', KeyBindType.Toggle)));
-            autoShieldMenu.AddItem(new MenuItem("allyAutoShieldPercentage", "Ally Auto Shield %")).SetValue(new Slider(40));
-            autoShieldMenu.AddItem(new MenuItem("allyAutoShieldMinMana", "Ally Auto Shield Min Mana %")).SetValue(new Slider(40));
             autoShieldMenu.AddItem(new MenuItem("selfAutoShield", "Automatically Shield Self").SetValue(true));
-            autoShieldMenu.AddItem(new MenuItem("selfAutoShieldPercentage", "Self Auto Sheild %")).SetValue(new Slider(40));
+            autoShieldMenu.AddItem(new MenuItem("selfAutoShieldPercentage", "Self Auto Sheild Min HP %")).SetValue(new Slider(40));
             autoShieldMenu.AddItem(new MenuItem("selfAutoShieldMinMana", "Self Auto Shield Min Mana %")).SetValue(new Slider(20));
+            autoShieldMenu.AddItem(new MenuItem("allyAutoShield", "Automatically Shield Allies").SetValue(new KeyBind('H', KeyBindType.Toggle)));
+            autoShieldMenu.AddItem(new MenuItem("allyAutoShieldPercentage", "Ally Auto Shield Min HP %")).SetValue(new Slider(40));
+            autoShieldMenu.AddItem(new MenuItem("allyAutoShieldMinMana", "Ally Auto Shield Min Mana %")).SetValue(new Slider(40));
             Menu.AddSubMenu(autoShieldMenu);
 
             Menu drawingMenu = new Menu("Drawing", "Drawing");
@@ -93,12 +94,14 @@ namespace FreeLux
             drawingMenu.AddItem(new MenuItem("drawR", "Draw R").SetValue(true));
             drawingMenu.AddItem(new MenuItem("drawMinimapR", "Draw R on Minimap").SetValue(true));
             drawingMenu.AddItem(new MenuItem("drawFullComboKillIndicator", "Draw Combo Kill Indicator").SetValue(true));
+            drawingMenu.AddItem(new MenuItem("drawCurrentMode", "Draw Current Mode").SetValue(true));
             Menu.AddSubMenu(drawingMenu);
 
             Menu otherMenu = new Menu("Other", "Other");
-            drawingMenu.AddItem(new MenuItem("packetCast", "Use Packet Casting?").SetValue(false));
-            drawingMenu.AddItem(new MenuItem("RKillSteal", "Use R to Kill Steal").SetValue(true));
-            drawingMenu.AddItem(new MenuItem("autoQGapcloser", "Auto Q Gapclosers").SetValue(true));
+            otherMenu.AddItem(new MenuItem("packetCast", "Use Packet Casting?").SetValue(false));
+            otherMenu.AddItem(new MenuItem("RKillSteal", "Use R to Kill Steal").SetValue(true));
+            otherMenu.AddItem(new MenuItem("killRecalling", "Use R to Kill Recalling Enemies").SetValue(true));;
+            otherMenu.AddItem(new MenuItem("autoQGapcloser", "Auto Q Gapclosers").SetValue(true));
             Menu.AddSubMenu(otherMenu);
             Menu.AddToMainMenu();
             #endregion
@@ -109,6 +112,7 @@ namespace FreeLux
             GameObject.OnCreate += Actions.GameObject_OnCreate;
             GameObject.OnDelete += Actions.GameObject_OnDelete;
             AntiGapcloser.OnEnemyGapcloser += Actions.AntiGapcloser_OnEnemyGapcloser;
+            Obj_AI_Base.OnTeleport += Actions.Obj_AI_Base_OnTeleport;
 
             Game.PrintChat("FreeLux loaded. Tactical decision, summoner!");
         }
@@ -117,6 +121,7 @@ namespace FreeLux
         private static void Game_OnGameUpdate(EventArgs args)
         {
             PacketCast = Menu.Item("packetCast").GetValue<bool>();
+            Console.Clear();
 
             if (Menu.Item("RKillSteal").GetValue<bool>()) Actions.KillSteal();
 
@@ -133,8 +138,14 @@ namespace FreeLux
                     break;
             }
 
-            if (Menu.Item("allyAutoShield").GetValue<bool>()) Actions.AutoShieldAlly();
-            if (Menu.Item("selfAutoShield").GetValue<bool>()) Actions.AutoShieldSelf();
+            // We don't want to interrupt our back ;)
+            if (!Player.IsRecalling())
+            {
+                if (Menu.Item("allyAutoShield").GetValue<KeyBind>().Active)
+                    Actions.AutoShieldAlly();
+                if (Menu.Item("selfAutoShield").GetValue<bool>())
+                    Actions.AutoShieldSelf();
+            }
         }
 
         private static void Drawing_OnDraw(EventArgs args)
@@ -147,31 +158,51 @@ namespace FreeLux
             bool drawE = Menu.Item("drawE").GetValue<bool>();
             bool drawR = Menu.Item("drawR").GetValue<bool>();
             bool drawMinimapR = Menu.Item("drawMinimapR").GetValue<bool>();
+            bool drawCurrentMode = Menu.Item("drawCurrentMode").GetValue<bool>();
 
             Color color = Color.Green;
             Vector3 playerPosition = ObjectManager.Player.Position;
+            var playerPositionOnScreen = Drawing.WorldToScreen(playerPosition);
 
             if (drawQ) Utility.DrawCircle(playerPosition, Q.Range, color);
             if (drawW) Utility.DrawCircle(playerPosition, W.Range, color);
             if (drawE) Utility.DrawCircle(playerPosition, E.Range, color);
             if (drawR) Utility.DrawCircle(playerPosition, R.Range, color);
 
+            if (drawCurrentMode)
+            {
+                switch (Orbwalker.ActiveMode)
+                {
+                    case Orbwalking.OrbwalkingMode.Combo:
+                        Drawing.DrawText(
+                            playerPositionOnScreen.X - 35, playerPositionOnScreen.Y + 40, Color.Lime, "Mode: Combo");
+                        break;
+                    case Orbwalking.OrbwalkingMode.LaneClear:
+                        Drawing.DrawText(
+                            playerPositionOnScreen.X - 35, playerPositionOnScreen.Y + 40, Color.Lime, "Mode: Lane Clear");
+                        break;
+                    case Orbwalking.OrbwalkingMode.Mixed:
+                        Drawing.DrawText(
+                            playerPositionOnScreen.X - 35, playerPositionOnScreen.Y + 40, Color.Lime, "Mode: Mixed");
+                        break;
+                    case Orbwalking.OrbwalkingMode.LastHit:
+                        Drawing.DrawText(
+                            playerPositionOnScreen.X - 35, playerPositionOnScreen.Y + 40, Color.Lime, "Mode: Last Hit");
+                        break;
+                }
+            }
+
             foreach (var h in ObjectManager.Get<Obj_AI_Hero>().Where(h => h.IsEnemy))
             {
                 var hero = h;
-                var text = new Render.Text("", hero, new Vector2(20, 50), 18, new ColorBGRA(255, 255, 255, 255));
-                text.VisibleCondition +=
-                    s =>
-                        Render.OnScreen(Drawing.WorldToScreen(hero.Position)) &&
-                        Menu.Item("drawFullComboKillIndicator").GetValue<bool>();
-                text.text = MathHelper.GetDamageString(hero);
-                text.OutLined = true;
-                text.Add();
+                var enemyPositionOnScreen = Drawing.WorldToScreen(hero.Position);
+                if (!hero.IsDead)
+                    Drawing.DrawText(enemyPositionOnScreen.X - 35, enemyPositionOnScreen.Y + 10, Color.OrangeRed, MathHelper.GetDamageString(hero));
             }
 
             // I think this will draw the range of Final Spark on the minimap?
             if (Player.Level >= 6 && drawMinimapR)
-                Utility.DrawCircle(playerPosition, R.Range, color, 5, 30, true);
+                Utility.DrawCircle(playerPosition, FreeLux.R.Range, Color.DeepSkyBlue, 2, 30, true);
 
         }
     }
