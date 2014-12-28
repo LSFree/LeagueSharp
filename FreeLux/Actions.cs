@@ -58,7 +58,7 @@ namespace FreeLux
                 {
                     if (!ObjectManager.Get<Obj_AI_Hero>()
                             .Where(h => h.IsEnemy && !h.IsDead)
-                            .Any(e => e.Distance(_luxEObject.Position) <= FreeLux.E.Width))
+                            .Any(e => e.Distance(_luxEObject.Position) <= FreeLux.E.Width*2))
                         return;
 
                     if (t == null)
@@ -90,7 +90,8 @@ namespace FreeLux
                 // We're holding down spacebar and our Q didn't land or it wasn't up, so try to cast it in a sensible place.
                 else if (t.IsValidTarget())
                 {
-                    FreeLux.E.CastIfHitchanceEquals(t, HitChance.High, FreeLux.PacketCast);
+                    //FreeLux.E.CastIfHitchanceEquals(t, HitChance.High, FreeLux.PacketCast);
+                    CastE(t);
                     return;
                 }
             }
@@ -379,6 +380,13 @@ namespace FreeLux
                 return Spell.CastStates.SuccessfullyCasted;
             //}
             //return Spell.CastStates.NotCasted;
+        }
+
+        public static Spell.CastStates CastE(Obj_AI_Hero target)
+        {
+            var prediction = FreeLux.E.GetPrediction(target, true);
+            FreeLux.E.Cast(prediction.CastPosition, FreeLux.PacketCast);
+            return Spell.CastStates.SuccessfullyCasted;
         }
 
         public static Spell.CastStates CastR(Obj_AI_Hero target, HitChance hitChance = HitChance.High)
