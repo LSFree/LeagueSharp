@@ -41,7 +41,7 @@
     </Reference>
     <Reference Include="LeagueSharp.Common, Version=1.0.0.13, Culture=neutral, processorArchitecture=x86">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\LS\System\LeagueSharp.Common.dll</HintPath>
+      <HintPath>C:\Users\Cameron\Documents\LS\\System\LeagueSharp.Common.dll</HintPath>
     </Reference>
     <Reference Include="SharpDX">
       <HintPath>C:\Users\Cameron\Documents\LS\\System\SharpDX.dll</HintPath>
@@ -59,6 +59,7 @@
     <Compile Include="Actions.cs" />
     <Compile Include="FreeLux.cs" />
     <Compile Include="MathHelper.cs" />
+    <Compile Include="PotionHelper.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

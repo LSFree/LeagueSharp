@@ -31,7 +31,7 @@ namespace FreeLux
             onlyUseRToKill = FreeLux.Menu.Item("comboOnlyUltToKill").GetValue<bool>();
 
             var autoAttackTarget =
-                TargetSelector.GetTarget(FreeLux.Player.GetRealAutoAttackRange(), TargetSelector.DamageType.Magical);
+                TargetSelector.GetTarget(GetOwnAutoAttackRange(), TargetSelector.DamageType.Magical);
             if (autoAttackTarget != null && autoAttackTarget.GetType() == typeof(Obj_AI_Hero) && HasIllumination(autoAttackTarget))
                 return;
             
@@ -234,7 +234,7 @@ namespace FreeLux
                 MinionTeam.NotAlly);
 
             var minionsAutoAttack = MinionManager.GetMinions(
-                FreeLux.Player.Position, FreeLux.Player.GetRealAutoAttackRange(), MinionTypes.All, MinionTeam.NotAlly);
+                FreeLux.Player.Position, GetOwnAutoAttackRange(), MinionTypes.All, MinionTeam.NotAlly);
             foreach (var minion in minionsAutoAttack)
             {
                 if (HasIllumination(minion))
@@ -331,7 +331,12 @@ namespace FreeLux
 
         public static bool InAutoAttackRange(Obj_AI_Base target)
         {
-            return FreeLux.Player.Distance(target) <= FreeLux.Player.GetRealAutoAttackRange();
+            return FreeLux.Player.Distance(target) <= GetOwnAutoAttackRange();
+        }
+
+        public static float GetOwnAutoAttackRange()
+        {
+            return FreeLux.Player.AttackRange + FreeLux.Player.BoundingRadius;
         }
 
         private static bool IsIgniteKillable(Obj_AI_Hero source, Obj_AI_Base target)

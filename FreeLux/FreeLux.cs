@@ -88,6 +88,10 @@ namespace FreeLux
             autoShieldMenu.AddItem(new MenuItem("allyAutoShieldMinMana", "Ally Auto Shield Min Mana %")).SetValue(new Slider(40));
             Menu.AddSubMenu(autoShieldMenu);
 
+            Menu potionManagerMenu = new Menu("Potion Manager","Potion Manager");
+            PotionHelper.AddToMenu(potionManagerMenu);
+            Menu.AddSubMenu(potionManagerMenu);
+
             Menu drawingMenu = new Menu("Drawing", "Drawing");
             drawingMenu.AddItem(new MenuItem("drawEnabled", "Drawings Enabled").SetValue(true));
             drawingMenu.AddItem(new MenuItem("drawQ", "Draw Q").SetValue(true));
@@ -177,17 +181,25 @@ namespace FreeLux
                 {
                     case Orbwalking.OrbwalkingMode.Combo:
                         Drawing.DrawText(
+                            playerPositionOnScreen.X - 36, playerPositionOnScreen.Y + 41, Color.Black, "Mode: Combo");
+                        Drawing.DrawText(
                             playerPositionOnScreen.X - 35, playerPositionOnScreen.Y + 40, Color.Lime, "Mode: Combo");
                         break;
                     case Orbwalking.OrbwalkingMode.LaneClear:
+                        Drawing.DrawText(
+                            playerPositionOnScreen.X - 36, playerPositionOnScreen.Y + 41, Color.Black, "Mode: Lane Clear");
                         Drawing.DrawText(
                             playerPositionOnScreen.X - 35, playerPositionOnScreen.Y + 40, Color.Lime, "Mode: Lane Clear");
                         break;
                     case Orbwalking.OrbwalkingMode.Mixed:
                         Drawing.DrawText(
+                            playerPositionOnScreen.X - 36, playerPositionOnScreen.Y + 41, Color.Black, "Mode: Mixed");
+                        Drawing.DrawText(
                             playerPositionOnScreen.X - 35, playerPositionOnScreen.Y + 40, Color.Lime, "Mode: Mixed");
                         break;
                     case Orbwalking.OrbwalkingMode.LastHit:
+                        Drawing.DrawText(
+                            playerPositionOnScreen.X - 36, playerPositionOnScreen.Y + 41, Color.Black, "Mode: Last Hit");
                         Drawing.DrawText(
                             playerPositionOnScreen.X - 35, playerPositionOnScreen.Y + 40, Color.Lime, "Mode: Last Hit");
                         break;
