@@ -392,12 +392,8 @@ namespace FreeLux
         public static Spell.CastStates CastR(Obj_AI_Hero target, HitChance hitChance = HitChance.High)
         {
             var prediction = FreeLux.R.GetPrediction(target, true);
-            if (prediction.Hitchance == hitChance)
-            {
-                FreeLux.R.Cast(prediction.CastPosition, FreeLux.PacketCast);
-                return Spell.CastStates.SuccessfullyCasted;
-            }
-            return Spell.CastStates.NotCasted;
+            FreeLux.R.Cast(prediction.CastPosition, FreeLux.PacketCast);
+            return Spell.CastStates.SuccessfullyCasted;
         }
 
         public static Spell.CastStates CastRForAoeDamage(Obj_AI_Hero target)
