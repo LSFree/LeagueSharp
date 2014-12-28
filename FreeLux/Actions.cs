@@ -71,7 +71,7 @@ namespace FreeLux
                         return;
                     }
                     // If they aren't in our AA range, pop E
-                    else if (InAutoAttackRange(t))
+                    else if (!InAutoAttackRange(t))
                     {
                         FreeLux.E.Cast(FreeLux.PacketCast);
                         return;
