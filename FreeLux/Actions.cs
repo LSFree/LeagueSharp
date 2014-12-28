@@ -215,8 +215,8 @@ namespace FreeLux
 
         public static void LaneClear()
         {
-            if (!Orbwalking.CanMove(50))
-                return;
+            /*if (!Orbwalking.CanMove(50))
+                return;*/
             
 
             bool useQ, useE;
