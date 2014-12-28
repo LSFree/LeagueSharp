@@ -68,7 +68,8 @@ namespace FreeLux
             Menu laneClearMenu = new Menu("Lane Clear", "Lane Clear");
             laneClearMenu.AddItem(new MenuItem("laneClearQ", "Use Q").SetValue(false));
             laneClearMenu.AddItem(new MenuItem("laneClearE", "Use E").SetValue(true));
-            laneClearMenu.AddItem(new MenuItem("laneClearMinMana", "Lane Clear Min Mana %").SetValue(new Slider(70)));
+            laneClearMenu.AddItem(new MenuItem("laneClearENumber", "Min # of Minions in E Width to Use E:").SetValue(new Slider(4, 1, 10)));
+            laneClearMenu.AddItem(new MenuItem("laneClearMinMana", "Lane Clear Min Mana %").SetValue(new Slider(60)));
             Menu.AddSubMenu(laneClearMenu);
 
             Menu mixedMenu = new Menu("Harass/Mixed", "Mixed");
@@ -80,7 +81,7 @@ namespace FreeLux
 
             Menu autoShieldMenu = new Menu("Auto Shield", "Auto Shield");
             autoShieldMenu.AddItem(new MenuItem("selfAutoShield", "Automatically Shield Self").SetValue(true));
-            autoShieldMenu.AddItem(new MenuItem("selfAutoShieldPercentage", "Self Auto Sheild Min HP %")).SetValue(new Slider(40));
+            autoShieldMenu.AddItem(new MenuItem("selfAutoShieldPercentage", "Self Auto Sheild Min HP %")).SetValue(new Slider(30));
             autoShieldMenu.AddItem(new MenuItem("selfAutoShieldMinMana", "Self Auto Shield Min Mana %")).SetValue(new Slider(20));
             autoShieldMenu.AddItem(new MenuItem("allyAutoShield", "Automatically Shield Allies").SetValue(new KeyBind('H', KeyBindType.Toggle)));
             autoShieldMenu.AddItem(new MenuItem("allyAutoShieldPercentage", "Ally Auto Shield Min HP %")).SetValue(new Slider(40));
@@ -88,6 +89,7 @@ namespace FreeLux
             Menu.AddSubMenu(autoShieldMenu);
 
             Menu drawingMenu = new Menu("Drawing", "Drawing");
+            drawingMenu.AddItem(new MenuItem("drawEnabled", "Drawings Enabled").SetValue(true));
             drawingMenu.AddItem(new MenuItem("drawQ", "Draw Q").SetValue(true));
             drawingMenu.AddItem(new MenuItem("drawW", "Draw W").SetValue(false));
             drawingMenu.AddItem(new MenuItem("drawE", "Draw E").SetValue(true));
@@ -150,7 +152,7 @@ namespace FreeLux
 
         private static void Drawing_OnDraw(EventArgs args)
         {
-            if (Player.IsDead)
+            if (Player.IsDead || !Menu.Item("drawEnabled").GetValue<bool>())
                 return;
 
             bool drawQ = Menu.Item("drawQ").GetValue<bool>();
@@ -197,13 +199,20 @@ namespace FreeLux
                 var hero = h;
                 var enemyPositionOnScreen = Drawing.WorldToScreen(hero.Position);
                 if (!hero.IsDead)
-                    Drawing.DrawText(enemyPositionOnScreen.X - 35, enemyPositionOnScreen.Y + 10, Color.OrangeRed, MathHelper.GetDamageString(hero));
+                {
+                    Drawing.DrawText(
+                        enemyPositionOnScreen.X - 36, enemyPositionOnScreen.Y + 41, Color.Black,
+                        MathHelper.GetDamageString(hero));
+                    Drawing.DrawText(
+                        enemyPositionOnScreen.X - 35, enemyPositionOnScreen.Y + 40, Color.OrangeRed,
+                        MathHelper.GetDamageString(hero));
+                }
             }
 
             // I think this will draw the range of Final Spark on the minimap?
-            if (Player.Level >= 6 && drawMinimapR)
-                Utility.DrawCircle(playerPosition, FreeLux.R.Range, Color.DeepSkyBlue, 2, 30, true);
-
+            if (/*Player.Level >= 6 &&*/ drawMinimapR)
+                Utility.DrawCircle(playerPosition, R.Range, Color.DeepSkyBlue, 2, 30, true);
+            
         }
     }
 }

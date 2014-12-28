@@ -16,6 +16,7 @@ namespace FreeLux
         private const string InternalEName = "LuxLightstrike_tar_green";
         private const string InternalEName2 = "LuxLightstrike_tar_red";
         private const string InternalBindingName = "LuxLightBindingMis";
+        private const string InternalIgniteName = "SummonerIgnite";
         private const int InternalIgniteRange = 600;
         private static GameObject _luxEObject;
 
@@ -33,18 +34,21 @@ namespace FreeLux
                 TargetSelector.GetTarget(FreeLux.Player.GetRealAutoAttackRange(), TargetSelector.DamageType.Magical);
             if (autoAttackTarget != null && autoAttackTarget.GetType() == typeof(Obj_AI_Hero) && HasIllumination(autoAttackTarget))
                 return;
-
+            
+            if (useDFG && FreeLux.DeathfireGrasp.IsReady())
+            {
+                var t = TargetSelector.GetTarget(FreeLux.Q.Range, TargetSelector.DamageType.Magical) as Obj_AI_Hero;
+                if (MathHelper.GetComboDamage(t) > t.Health && t.IsValidTarget(FreeLux.DeathfireGrasp.Range))
+                    FreeLux.DeathfireGrasp.Cast(t);
+            }
+            
             if (useQ && FreeLux.Q.IsReady())
             {
                 var t = TargetSelector.GetTarget(FreeLux.Q.Range, TargetSelector.DamageType.Magical) as Obj_AI_Hero;
                 if (t == null)
                     return;
-                if (t.IsValidTarget())
-                {
-                    FreeLux.Q.CastIfHitchanceEquals(t, HitChance.High, FreeLux.PacketCast);
-                    //Game.PrintChat("Tried to cast Q.");
-                    return;
-                }
+                CastQ(t);
+                return;
             }
 
             if (useE && FreeLux.E.IsReady())
@@ -123,6 +127,7 @@ namespace FreeLux
                 // And of course, only include the passive damage if they're in range to be auto attacked.
                 if (MathHelper.GetRDamage(rTarget) + ((HasIllumination(rTarget) && InAutoAttackRange(rTarget)) ? MathHelper.GetPassiveProcDamage() : 0.0d) >= rTarget.Health &&
                    ((HasIllumination(rTarget) && InAutoAttackRange(rTarget)) ? MathHelper.GetPassiveProcDamage() : 0.0d) >= rTarget.Health &&
+                   !IsIgnited(rTarget) &&
                    onlyUseRToKill)
                 {
                     CastR(rTarget);
@@ -199,26 +204,12 @@ namespace FreeLux
                         //.FirstOrDefault();
                 foreach (var target in ksTargets)
                 {
-                    if (MathHelper.GetRDamage(target) >= target.Health)
+                    if (MathHelper.GetRDamage(target) >= target.Health && !IsIgnited(target))
                     {
                         CastR(target);
                         return;
                     }
                 }
-                /*var rTarget =
-                    TargetSelector.GetTarget(FreeLux.R.Range, TargetSelector.DamageType.Magical) as Obj_AI_Hero;
-                // Only cast R if it will kill them (include procing the passive in the damage that is applied in 'killing them')
-                // Also, make sure that the damage from the passive wouldn't do enough by itself to kill them
-                // And of course, only include the passive damage if they're in range to be auto attacked.
-                if (MathHelper.GetRDamage(rTarget) +
-                    ((HasIllumination(rTarget) && InAutoAttackRange(rTarget)) ? MathHelper.GetPassiveProcDamage() : 0.0d) >=
-                    rTarget.Health &&
-                    ((HasIllumination(rTarget) && InAutoAttackRange(rTarget)) ? MathHelper.GetPassiveProcDamage() : 0.0d) >=
-                    rTarget.Health &&)
-                {
-                    CastR(rTarget);
-                    return;
-                }*/
             }
         }
 
@@ -231,6 +222,7 @@ namespace FreeLux
             bool useQ, useE;
             useQ = FreeLux.Menu.Item("laneClearQ").GetValue<bool>();
             useE = FreeLux.Menu.Item("laneClearE").GetValue<bool>();
+            int useENumber = FreeLux.Menu.Item("laneClearENumber").GetValue<Slider>().Value;
 
             var allMinionsQ = MinionManager.GetMinions(
                 FreeLux.Player.ServerPosition, FreeLux.Q.Range, MinionTypes.All, MinionTeam.NotAlly);
@@ -261,9 +253,9 @@ namespace FreeLux
             {
                 var pos1 = FreeLux.E.GetCircularFarmLocation(rangedMinionsE, FreeLux.E.Width);
                 var pos2 = FreeLux.E.GetCircularFarmLocation(allMinionsE, FreeLux.E.Width);
-                if (pos1.MinionsHit >= 4)
+                if (pos1.MinionsHit >= useENumber)
                     FreeLux.E.Cast(pos1.Position, FreeLux.PacketCast);
-                else if (pos2.MinionsHit >= 4)
+                else if (pos2.MinionsHit >= useENumber)
                     FreeLux.E.Cast(pos2.Position, FreeLux.PacketCast);
             }
             else if (useQ && FreeLux.Q.IsReady())
@@ -332,6 +324,11 @@ namespace FreeLux
             return (_luxEObject != null);
         }
 
+        public static bool IsIgnited(Obj_AI_Base target)
+        {
+            return target.HasBuff(InternalIgniteName);
+        }
+
         public static bool InAutoAttackRange(Obj_AI_Base target)
         {
             return FreeLux.Player.Distance(target) <= FreeLux.Player.GetRealAutoAttackRange();
@@ -360,22 +357,23 @@ namespace FreeLux
                 FreeLux.Q.Cast(gapcloser.Sender, FreeLux.PacketCast);
         }
 
-        // Q Logic from ChewyMoonsLux
-        // Source: https://github.com/ChewyMoon/ChewyMoonScripts/blob/master/ChewyMoonsLux/SpellCombo.cs
+        // Q Logic from ChewyMoonsLux/Mid or Feed <3
+        // Source: https://github.com/ChewyMoon/ChewyMoonScripts/
         public static Spell.CastStates CastQ(Obj_AI_Hero target, HitChance hitChance = HitChance.Medium)
         {
-            var prediction = FreeLux.Q.GetPrediction(target, true);
-            /*var minions = prediction.CollisionObjects.Count(thing => thing.IsMinion);
+            var prediction = FreeLux.Q.GetPrediction(target);
+            var col = FreeLux.Q.GetCollision(FreeLux.Player.ServerPosition.To2D(), new List<Vector2> { prediction.CastPosition.To2D() });
+            var minions = col.Where(x => !(x is Obj_AI_Hero)).Count(x => x.IsMinion);
 
             if (minions > 1)
-                return Spell.CastStates.Collision;*/
+                return Spell.CastStates.Collision;
 
-            if (prediction.Hitchance == hitChance)
-            {
+            /*if (prediction.Hitchance == hitChance)
+            {*/
                 FreeLux.Q.Cast(prediction.CastPosition, FreeLux.PacketCast);
                 return Spell.CastStates.SuccessfullyCasted;
-            }
-            return Spell.CastStates.NotCasted;
+            //}
+            //return Spell.CastStates.NotCasted;
         }
 
         public static Spell.CastStates CastR(Obj_AI_Hero target, HitChance hitChance = HitChance.High)

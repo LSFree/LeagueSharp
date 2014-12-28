@@ -13,7 +13,7 @@ namespace FreeLux
             get { return FreeLux.Player; }
         }
 
-        private static float GetComboDamage(Obj_AI_Base enemy)
+        public static float GetComboDamage(Obj_AI_Base enemy)
         {
             var damage = 0d;
 
@@ -34,7 +34,7 @@ namespace FreeLux
 
             if (ObjectManager.Player.GetSpellSlot("SummonerIgnite") != SpellSlot.Unknown)
             {
-                damage += Player.GetSummonerSpellDamage(enemy, Damage.SummonerSpell.Ignite);
+                damage += GetIgniteDamage(enemy);
             }
 
             //damage += Player.GetAutoAttackDamage(enemy, true) * 2;
@@ -56,42 +56,42 @@ namespace FreeLux
             eDamage = (FreeLux.E.IsReady()) ? Player.GetSpellDamage(enemy, SpellSlot.E) : 0.0d;
             rDamage = (FreeLux.R.IsReady()) ? Player.GetSpellDamage(enemy, SpellSlot.R) : 0.0d;
             iDamage = (FreeLux.IgniteSlot.IsReady()) ? Player.GetSummonerSpellDamage(enemy, Damage.SummonerSpell.Ignite) : 0.0d;
-
+            bool debug = false;
 
             if (enemy.Health < qDamage)
-                str = "Q Kill!";
+                str = "Q Kill! " + ((debug) ? ((int)(qDamage)).ToString() : "");
             else if (enemy.Health < eDamage)
-                str = "E Kill!";
+                str = "E Kill! " + ((debug) ? ((int)(eDamage)).ToString() : "");
             else if (enemy.Health < rDamage)
-                str = "R Kill!";
+                str = "R Kill! " + ((debug) ? ((int)(rDamage)).ToString() : "");
             else if (enemy.Health < iDamage)
-                str = "Ignite Kill!";
+                str = "Ignite Kill! " + ((debug) ? ((int)(iDamage)).ToString() : "");
             else if (enemy.Health < qDamage + iDamage)
-                str = "Q+Ignite Kill!";
+                str = "Q+Ignite Kill! " + ((debug) ? ((int)(qDamage + iDamage)).ToString() : "");
             else if (enemy.Health < eDamage + iDamage)
-                str = "E+Ignite Kill!";
+                str = "E+Ignite Kill! " + ((debug) ? ((int)(eDamage + iDamage)).ToString() : "");
             else if (enemy.Health < rDamage + iDamage)
-                str = "R+Ignite Kill!";
+                str = "R+Ignite Kill! " + ((debug) ? ((int)(rDamage + iDamage)).ToString() : "");
             else if (enemy.Health < qDamage + eDamage)
-                str = "Q+E Kill!";
+                str = "Q+E Kill! " + ((debug) ? ((int)(qDamage + eDamage)).ToString() : "");
             else if (enemy.Health < qDamage + rDamage)
-                str = "Q+R Kill!";
+                str = "Q+R Kill! " + ((debug) ? ((int)(qDamage + rDamage)).ToString() : "");
             else if (enemy.Health < eDamage + rDamage)
-                str = "E+R Kill!";
+                str = "E+R Kill! " + ((debug) ? ((int)(eDamage + rDamage)).ToString() : "");
             else if (enemy.Health < qDamage + eDamage + iDamage)
-                str = "Q+E+Ignite Kill!";
+                str = "Q+E+Ignite Kill! " + ((debug) ? ((int)(qDamage + eDamage + iDamage)).ToString() : "");
             else if (enemy.Health < qDamage + rDamage + iDamage)
-                str = "Q+R+Ignite Kill!";
+                str = "Q+R+Ignite Kill! " + ((debug) ? ((int)(qDamage + rDamage + iDamage)).ToString() : "");
             else if (enemy.Health < eDamage + rDamage + iDamage)
-                str = "E+R+Ignite Kill!";
+                str = "E+R+Ignite Kill! " + ((debug) ? ((int)(eDamage + rDamage + iDamage)).ToString() : "");
             else if (enemy.Health < qDamage + eDamage + rDamage)
-                str = "Q+E+R Kill!";
+                str = "Q+E+R Kill! " + ((debug) ? ((int)(qDamage + eDamage + rDamage)).ToString() : "");
             else if (enemy.Health < qDamage + eDamage + rDamage + iDamage)
-                str = "Q+E+R+Ignite Kill!";
+                str = "Q+E+R+Ignite Kill! " + ((debug) ? ((int)(qDamage + eDamage + rDamage + iDamage)).ToString() : "");
             else if (enemy.Health < GetComboDamage(enemy))
-                str = "Full Combo Kill!";
+                str = "Full Combo Kill! " + ((debug) ? ((int)GetComboDamage(enemy)).ToString() : "");
             else
-                str = "Cannot Kill!";
+                str = "Cannot Kill! " + ((debug) ? ((int)GetComboDamage(enemy)).ToString() : "");
             return str;
         }
 
@@ -100,7 +100,7 @@ namespace FreeLux
             return 10 + 8 * Player.Level + (Player.FlatMagicDamageMod + Player.BaseAbilityDamage) * 0.2d;
         }
 
-        public static double GetIgniteDamage(Obj_AI_Hero enemy)
+        public static double GetIgniteDamage(Obj_AI_Base enemy)
         {
             return Player.GetSummonerSpellDamage(enemy, Damage.SummonerSpell.Ignite);
         }
