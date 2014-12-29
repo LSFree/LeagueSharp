@@ -85,7 +85,7 @@ namespace FreeLux
 
         private static void OnGameUpdate(EventArgs args)
         {
-            if (FreeLux.Player.IsRecalling() || Utility.InFountain() && Utility.InShopRange())
+            if (FreeLux.Player.IsRecalling() || ObjectManager.Player.InFountain() && ObjectManager.Player.InShop())
                 return;
 
             bool useHP = FreeLux.Menu.Item("potionHpEnabled").GetValue<bool>();

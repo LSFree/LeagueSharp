@@ -1,5 +1,6 @@
 ﻿#region Includes
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 using LeagueSharp;
@@ -153,7 +154,7 @@ namespace FreeLux
                     Actions.AutoShieldSelf();
             }
 
-            //Console.Clear();
+            Console.Clear();
         }
 
         private static void Drawing_OnDraw(EventArgs args)
