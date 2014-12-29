@@ -9,7 +9,7 @@ using LeagueSharp.Common;
 
 namespace FreeLux
 {
-    internal static class PotionHelper
+    static class PotionHelper
     {
         private enum PotionType
         {

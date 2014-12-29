@@ -127,7 +127,7 @@ namespace FreeLux
         private static void Game_OnGameUpdate(EventArgs args)
         {
             PacketCast = Menu.Item("packetCast").GetValue<bool>();
-            Console.Clear();
+            
 
             if (Menu.Item("RKillSteal").GetValue<bool>()) Actions.KillSteal();
 
@@ -152,6 +152,8 @@ namespace FreeLux
                 if (Menu.Item("selfAutoShield").GetValue<bool>())
                     Actions.AutoShieldSelf();
             }
+
+            //Console.Clear();
         }
 
         private static void Drawing_OnDraw(EventArgs args)

@@ -3,7 +3,7 @@ using LeagueSharp.Common;
 
 namespace FreeLux
 {
-    internal static class MathHelper
+    static class MathHelper
     {
         private const int InternalBasicAttackRange = 550;
         private const int InternalIgniteRange = 600;

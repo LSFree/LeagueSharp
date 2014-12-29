@@ -10,7 +10,7 @@ using Collision = LeagueSharp.Common.Collision;
 
 namespace FreeLux
 {
-    internal static class Actions
+    static class Actions
     {
         private const string InternalPassiveName = "luxilluminatingfraulein";
         private const string InternalEName = "LuxLightstrike_tar_green";
