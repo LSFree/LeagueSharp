@@ -115,6 +115,7 @@ namespace FreeLux
 
             Game.OnGameUpdate += Game_OnGameUpdate;
             Drawing.OnDraw += Drawing_OnDraw;
+            Drawing.OnEndScene += Drawing_OnEndScene;
 
             GameObject.OnCreate += Actions.GameObject_OnCreate;
             GameObject.OnDelete += Actions.GameObject_OnDelete;
@@ -123,7 +124,6 @@ namespace FreeLux
 
             Game.PrintChat("FreeLux loaded. Tactical decision, summoner!");
         }
-
 
         private static void Game_OnGameUpdate(EventArgs args)
         {
@@ -166,7 +166,6 @@ namespace FreeLux
             bool drawW = Menu.Item("drawW").GetValue<bool>();
             bool drawE = Menu.Item("drawE").GetValue<bool>();
             bool drawR = Menu.Item("drawR").GetValue<bool>();
-            bool drawMinimapR = Menu.Item("drawMinimapR").GetValue<bool>();
             bool drawCurrentMode = Menu.Item("drawCurrentMode").GetValue<bool>();
 
             Color color = Color.Green;
@@ -223,11 +222,14 @@ namespace FreeLux
                         MathHelper.GetDamageString(hero));
                 }
             }
-
-            // I think this will draw the range of Final Spark on the minimap?
-            if (/*Player.Level >= 6 &&*/ drawMinimapR)
-                Utility.DrawCircle(playerPosition, R.Range, Color.DeepSkyBlue, 2, 30, true);
             
+        }
+
+        static void Drawing_OnEndScene(EventArgs args)
+        {
+            bool drawMinimapR = Menu.Item("drawMinimapR").GetValue<bool>();
+            if (Player.Level >= 6 && drawMinimapR)
+                Utility.DrawCircle(ObjectManager.Player.Position, R.Range, Color.DeepSkyBlue, 2, 30, true);
         }
     }
 }
